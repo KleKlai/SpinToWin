@@ -4,10 +4,13 @@ import { useRef, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { DEFAULT_WHEEL_PRIZES, WHEEL_CONFIG, Prize, getWeightedRandomPrize } from '@/lib/wheel-constants'
 import { motion } from 'framer-motion'
+import DiscountForm from './discount-form'
 
 interface SpinWheelProps {
   prizes?: Prize[]
 }
+
+type AppState = 'wheel' | 'form' | 'coupon'
 
 export default function SpinWheel({ prizes = DEFAULT_WHEEL_PRIZES }: SpinWheelProps) {
   const PRIZES = prizes
@@ -17,6 +20,8 @@ export default function SpinWheel({ prizes = DEFAULT_WHEEL_PRIZES }: SpinWheelPr
   const [isSpinning, setIsSpinning] = useState(false)
   const [winner, setWinner] = useState<Prize | null>(null)
   const [wheelSize, setWheelSize] = useState(500)
+  const [appState, setAppState] = useState<AppState>('wheel')
+  const [discountPercentage, setDiscountPercentage] = useState<string>('')
 
   // Update wheel size based on screen width
   useEffect(() => {
@@ -177,124 +182,6 @@ export default function SpinWheel({ prizes = DEFAULT_WHEEL_PRIZES }: SpinWheelPr
     return PRIZES[segmentIndex % PRIZES.length]
   }
 
-  // Function to open GoHighLevel popup form
-  const openGoHighLevelPopup = (prizeName: string) => {
-    const discountMatch = prizeName.match(/(\d+)%/)
-    const discountValue = discountMatch ? discountMatch[1] : '0'
-    
-    const formUrl = `https://api.leadconnectorhq.com/widget/form/RiifQcsGiB7V1X1KHOcK?key=${encodeURIComponent(discountValue)}`
-    
-    const modalOverlay = document.createElement('div')
-    modalOverlay.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.8);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-      animation: fadeIn 0.3s ease;
-    `
-
-    const modalContainer = document.createElement('div')
-    modalContainer.style.cssText = `
-      position: relative;
-      width: 95%;
-      max-width: 500px;
-      max-height: 90vh;
-      background: white;
-      border-radius: 20px;
-      overflow: hidden;
-      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
-    `
-
-    const closeButton = document.createElement('button')
-    closeButton.innerHTML = '×'
-    closeButton.style.cssText = `
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: white;
-      border: 2px solid #e0e0e0;
-      font-size: 28px;
-      color: #666;
-      line-height: 1;
-      cursor: pointer;
-      z-index: 10001;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s;
-    `
-
-    closeButton.onmouseenter = () => {
-      closeButton.style.background = '#f8f8f8'
-      closeButton.style.borderColor = '#999'
-      closeButton.style.color = '#333'
-    }
-
-    closeButton.onmouseleave = () => {
-      closeButton.style.background = 'white'
-      closeButton.style.borderColor = '#e0e0e0'
-      closeButton.style.color = '#666'
-    }
-
-    const iframe = document.createElement('iframe')
-    iframe.src = formUrl
-    iframe.style.cssText = `
-      width: 100%;
-      height: 500px;
-      border: none;
-      border-radius: 20px;
-    `
-
-    const style = document.createElement('style')
-    style.textContent = `
-      @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
-      @keyframes fadeOut {
-        from { opacity: 1; }
-        to { opacity: 0; }
-      }
-    `
-    document.head.appendChild(style)
-
-    modalContainer.appendChild(closeButton)
-    modalContainer.appendChild(iframe)
-    modalOverlay.appendChild(modalContainer)
-    document.body.appendChild(modalOverlay)
-
-    document.body.style.overflow = 'hidden'
-
-    const closeModal = () => {
-      modalOverlay.style.animation = 'fadeOut 0.3s ease forwards'
-      setTimeout(() => {
-        if (document.body.contains(modalOverlay)) {
-          document.body.removeChild(modalOverlay)
-        }
-        document.body.style.overflow = 'auto'
-      }, 300)
-    }
-
-    closeButton.addEventListener('click', closeModal)
-    modalOverlay.addEventListener('click', (e) => {
-      if (e.target === modalOverlay) closeModal()
-    })
-
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeModal()
-    }
-    document.addEventListener('keydown', handleEscape)
-  }
-
   const handleSpin = () => {
     console.log('Spin button clicked!')
     if (isSpinning) return
@@ -327,14 +214,26 @@ export default function SpinWheel({ prizes = DEFAULT_WHEEL_PRIZES }: SpinWheelPr
         
         setIsSpinning(false)
         setWinner(winningPrize)
-        
-        setTimeout(() => {
-          openGoHighLevelPopup(winningPrize.name)
-        }, 1500)
       }
     }
 
     requestAnimationFrame(animate)
+  }
+
+  const handleClaimDiscount = () => {
+    if (!winner) return
+    
+    // Extract discount percentage from prize name
+    const discountMatch = winner.name.match(/(\d+)%/)
+    const discountValue = discountMatch ? discountMatch[1] : '5'
+    
+    setDiscountPercentage(discountValue)
+    setAppState('form')
+  }
+
+  const handleBackToWheel = () => {
+    setWinner(null)
+    setAppState('wheel')
   }
 
   // Calculate button size based on wheel size
@@ -342,6 +241,12 @@ export default function SpinWheel({ prizes = DEFAULT_WHEEL_PRIZES }: SpinWheelPr
                     wheelSize < 500 ? 100 : 
                     128
 
+  // Render the DiscountForm if in form or coupon state
+  if (appState === 'form') {
+    return <DiscountForm discount={discountPercentage} onBack={handleBackToWheel} />
+  }
+
+  // Main wheel UI
   return (
     <main className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-100 flex flex-col items-center justify-center gap-6 p-4">
       <div className="text-center space-y-2 md:space-y-3">
@@ -420,15 +325,45 @@ export default function SpinWheel({ prizes = DEFAULT_WHEEL_PRIZES }: SpinWheelPr
       </div>
 
       {/* Winner Banner - Responsive */}
-      <div className="flex flex-col items-center gap-4 md:gap-6">
+      <div className="flex flex-col items-center gap-4 md:gap-6 w-full max-w-md">
         {winner && (
           <motion.div
             initial={{ scale: 0, y: 50 }}
             animate={{ scale: 1, y: 0 }}
             transition={{ type: "spring", stiffness: 200 }}
-            className="animate-pulse bg-gradient-to-r from-green-400 via-emerald-500 to-green-600 text-white px-6 py-4 md:px-10 md:py-6 rounded-2xl md:rounded-3xl font-bold text-lg md:text-2xl shadow-xl md:shadow-2xl border-4 border-white"
+            className="w-full space-y-4"
           >
-            🎉 You won: <span className="text-yellow-300">{winner.name}</span>! 🎉
+            <div className="bg-gradient-to-r from-green-400 via-emerald-500 to-green-600 text-white px-6 py-4 md:px-8 md:py-6 rounded-2xl font-bold text-lg md:text-xl shadow-xl border-4 border-white text-center">
+              🎉 Congratulations! 🎉
+            </div>
+            
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="bg-white p-6 rounded-2xl shadow-lg border-2 border-emerald-100"
+            >
+              <p className="text-gray-700 text-center mb-4">
+                <span className="font-bold text-emerald-600 text-xl">
+                  {winner.name}
+                </span>
+              </p>
+              <p className="text-gray-600 text-center mb-6 text-sm md:text-base">
+                We've reserved your {winner.name.replace('% Discount', '%')} for the next 15 minutes!
+              </p>
+              
+              <Button
+                onClick={handleClaimDiscount}
+                size="lg"
+                className="w-full py-4 text-base md:text-lg bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-bold rounded-xl shadow-lg"
+              >
+                Claim Your {winner.name.replace('% Discount', '%')}
+              </Button>
+              
+              <p className="text-xs text-gray-500 text-center mt-4">
+                Offer expires in 15 minutes
+              </p>
+            </motion.div>
           </motion.div>
         )}
       </div>
@@ -450,6 +385,6 @@ export default function SpinWheel({ prizes = DEFAULT_WHEEL_PRIZES }: SpinWheelPr
           }
         }
       `}</style>
-    </main>
+    </main> 
   )
 }
