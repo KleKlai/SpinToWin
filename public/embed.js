@@ -4,7 +4,7 @@
 
   // Configuration
   const config = {
-    widgetUrl: 'https://your-nextjs-app.vercel.app/embed',
+    widgetUrl: 'https://spin-to-win-git-main-maynard-magallens-projects.vercel.app/embed',
     buttonText: '🎡 Spin & Win!',
     buttonColor: 'linear-gradient(135deg, #f97316, #dc2626)',
     buttonPosition: 'bottom-right', // bottom-right, bottom-left, top-right, top-left
