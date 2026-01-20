@@ -21,6 +21,52 @@
             border-radius: 12px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
+        
+        /* Widget Styles */
+        #spin-widget-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #f97316, #dc2626);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 9998;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+        
+        #spin-widget-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        
+        #spin-widget-iframe {
+            width: 95%;
+            max-width: 550px;
+            height: 90vh;
+            max-height: 750px;
+            border: none;
+            border-radius: 20px;
+            background: white;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -30,13 +76,41 @@
         <p>Look at the bottom right corner to play our "Spin & Win" game.</p>
     </div>
 
-    <script 
-        src="https://spin-to-win-git-main-maynard-magallens-projects.vercel.app/embed.js"
-        data-widget-url="https://spin-to-win-git-main-maynard-magallens-projects.vercel.app/embed"
-        data-button-text="🎡 Spin & Win!"
-        data-button-color="linear-gradient(135deg, #f97316, #dc2626)"
-        data-button-position="bottom-right"
-    ></script>
+    <!-- Widget Elements -->
+    <button id="spin-widget-button">🎡 Spin & Win!</button>
+    <div id="spin-widget-modal">
+        <iframe id="spin-widget-iframe" src="https://spin-to-win-git-main-maynard-magallens-projects.vercel.app/embed"></iframe>
+    </div>
+
+    <script>
+        // Simple widget implementation
+        const button = document.getElementById('spin-widget-button');
+        const modal = document.getElementById('spin-widget-modal');
+        const iframe = document.getElementById('spin-widget-iframe');
+        
+        button.addEventListener('click', () => {
+            modal.style.display = 'flex';
+            modal.style.animation = 'fadeIn 0.3s ease';
+            document.body.style.overflow = 'hidden';
+        });
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
+        });
+        
+        // Close on Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.style.display === 'flex') {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
+        });
+        
+        console.log('Spin & Win widget loaded!');
+    </script>
 
 </body>
 </html>
