@@ -429,7 +429,7 @@ export default function SpinWheel({
 
       <div
         ref={containerRef}
-        className="relative w-full h-full flex items-center justify-center min-h-[380px]"
+        className="relative w-full h-full flex items-center justify-center min-h-[280px]"
       >
         <canvas
           ref={canvasRef}
@@ -556,9 +556,9 @@ export default function SpinWheel({
 
               <Button
                 onClick={handleClaimDiscount}
-                size={compact ? "default" : "lg"}
+                size="default"
                 className={`
-                  w-full ${compact ? "py-2 text-sm" : "py-4 text-base md:text-lg"}
+                  w-full py-2 text-sm
                   bg-gradient-to-r from-emerald-500 to-green-600 
                   hover:from-emerald-600 hover:to-green-700 
                   text-white font-bold rounded-xl shadow-lg
