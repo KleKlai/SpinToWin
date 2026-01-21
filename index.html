@@ -1,47 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Widget Embed Test</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f4f4f9;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modern Website with Spin Wheel</title>
 
-        .container {
-            text-align: center;
-            padding: 2rem;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-    </style>
+  <!-- Load the web component script from Next.js server -->
+  <script src="http://localhost:3000/spin-wheel-embed.js" defer></script>
+
+  <!-- Optional: if you want to import it as module (not necessary) -->
+  <!-- <script type="module">
+    import 'http://localhost:3000/spin-wheel-embed.js';
+  </script> -->
+
+  <!-- Your existing styles ... -->
 </head>
-
 <body>
+  <!-- Your hero, content, etc. -->
 
-    <div class="container">
-        <h1>Testing My Widget</h1>
-        <p>The button should appear based on the script configuration below:</p>
+  <!-- Use ONE instance for testing (remove duplicates during debug) -->
+  <spin-wheel 
+    delay="3000" 
+    compact="true"
+  ></spin-wheel>
 
-        <!-- Option 1: Simple script tag -->
-        <script src="http://localhost:3000/embed.js"></script>
+  <!-- Example with custom prizes (optional) -->
+  <!--
+  <spin-wheel 
+    delay="6000" 
+    compact="true"
+    prizes='[{"name":"10% Off","color":"#f97316"},{"name":"25% Off","color":"#ea580c"},{"name":"Free Shipping","color":"#c2410c"},{"name":"Try Again","color":"#9ca3af"}]'
+  ></spin-wheel>
+  -->
 
-        <!-- Option 2: Web Component -->
-        <script src="http://localhost:3000/spin-wheel-wc.js"></script>
-        <spin-wheel-widget url="http://localhost:3000/embed" position="bottom-right" color="#FF6B35" auto-open
-            delay="3000">
-        </spin-wheel-widget>
-    </div>
+  <!-- Optional manual trigger button -->
+  <button id="show-wheel-btn">🎡 Show Spin Wheel Manually</button>
 
+  <script>
+    // Optional: manual trigger example
+    document.getElementById('show-wheel-btn')?.addEventListener('click', () => {
+      const wheels = document.querySelectorAll('spin-wheel');
+      wheels.forEach(el => {
+        // You can dispatch a custom event or just show it directly if you modify the web component
+        el.style.display = 'block'; // crude way – better to use postMessage or attribute
+      });
+    });
+  </script>
 </body>
-
 </html>

@@ -7,9 +7,10 @@ import { motion } from 'framer-motion'
 interface DiscountFormProps {
   discount: string
   onBack?: () => void
+  compact?: boolean
 }
 
-export default function DiscountForm({ discount, onBack }: DiscountFormProps) {
+export default function DiscountForm({ discount, onBack, compact = false }: DiscountFormProps) {
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
   const [mobile, setMobile] = useState('')
@@ -281,7 +282,11 @@ export default function DiscountForm({ discount, onBack }: DiscountFormProps) {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-100 flex flex-col items-center justify-center gap-6 p-4">
+    <main className={`
+      ${compact ? 'p-4' : 'min-h-screen p-4'}
+      ${!compact ? 'bg-gradient-to-br from-emerald-50 via-white to-green-100' : ''}
+      flex flex-col items-center justify-center gap-6
+    `}>
       <motion.div
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}

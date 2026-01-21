@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Spin Wheel Embed Test</title>
+</head>
+<body style="margin:0; font-family:system-ui; background:#f8fafc; min-height:120vh;">
+
+  <header style="padding:6rem 2rem; text-align:center; background:linear-gradient(135deg,#667eea,#764ba2); color:white;">
+    <h1>Test Page</h1>
+    <p>Wheel should fade in after ~5 seconds</p>
+  </header>
+
+  <!-- The web component – using src-base for local testing -->
+  <spin-wheel
+    delay="5000"
+    compact="true"
+    src-base="http://localhost:3000"
+    <!-- prizes='[{"name":"20% Off","color":"#f59e0b"},{"name":"Free Gift","color":"#10b981"}]' -->
+  ></spin-wheel>
+
+  <main style="max-width:1100px; margin:0 auto; padding:3rem 1rem;">
+    <h2>Scroll down...</h2>
+    <p style="height:80vh; background:#e2e8f0; border-radius:1rem; display:grid; place-items:center;">
+      Long content area
+    </p>
+  </main>
+
+  <script src="http://localhost:3000/spin-wheel-embed.js" defer></script>
+</body>
+</html>
