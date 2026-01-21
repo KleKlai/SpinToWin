@@ -1,50 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Modern Website with Spin Wheel</title>
-
-  <!-- Load the web component script from Next.js server -->
-  <script src="http://localhost:3000/spin-wheel-embed.js" defer></script>
-
-  <!-- Optional: if you want to import it as module (not necessary) -->
-  <!-- <script type="module">
-    import 'http://localhost:3000/spin-wheel-embed.js';
-  </script> -->
-
-  <!-- Your existing styles ... -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spin Wheel Embed Test</title>
 </head>
-<body>
-  <!-- Your hero, content, etc. -->
 
-  <!-- Use ONE instance for testing (remove duplicates during debug) -->
-  <spin-wheel 
-    delay="3000" 
-    compact="true"
-  ></spin-wheel>
+<body style="margin:0; font-family:system-ui; background:#f8fafc; min-height:120vh;">
 
-  <!-- Example with custom prizes (optional) -->
-  <!--
-  <spin-wheel 
-    delay="6000" 
-    compact="true"
-    prizes='[{"name":"10% Off","color":"#f97316"},{"name":"25% Off","color":"#ea580c"},{"name":"Free Shipping","color":"#c2410c"},{"name":"Try Again","color":"#9ca3af"}]'
-  ></spin-wheel>
-  -->
+  <header
+    style="padding:6rem 2rem; text-align:center; background:linear-gradient(135deg,#667eea,#764ba2); color:white;">
+    <h1>Test Page</h1>
+    <p>Wheel should fade in after ~5 seconds</p>
+  </header>
 
-  <!-- Optional manual trigger button -->
-  <button id="show-wheel-btn">🎡 Show Spin Wheel Manually</button>
+  <spin-wheel delay="2000" compact="false" src-base="http://localhost:3000"></spin-wheel>
 
-  <script>
-    // Optional: manual trigger example
-    document.getElementById('show-wheel-btn')?.addEventListener('click', () => {
-      const wheels = document.querySelectorAll('spin-wheel');
-      wheels.forEach(el => {
-        // You can dispatch a custom event or just show it directly if you modify the web component
-        el.style.display = 'block'; // crude way – better to use postMessage or attribute
-      });
-    });
-  </script>
+  <main style="max-width:1100px; margin:0 auto; padding:3rem 1rem;">
+    <h2>Scroll down...</h2>
+    <p style="height:80vh; background:#e2e8f0; border-radius:1rem; display:grid; place-items:center;">
+      Long content area
+    </p>
+  </main>
+
+  <script src="http://localhost:3000/spin-wheel-embed.js" defer></script>
 </body>
+
 </html>

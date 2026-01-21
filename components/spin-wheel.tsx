@@ -1,6 +1,7 @@
+// components/spin-wheel.tsx
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DEFAULT_WHEEL_PRIZES,
@@ -40,19 +41,24 @@ export default function SpinWheel({
   const [rotation, setRotation] = useState(0);
   const [isSpinning, setIsSpinning] = useState(false);
   const [winner, setWinner] = useState<Prize | null>(null);
-  const [wheelSize, setWheelSize] = useState(compact ? 300 : 500);
+  const [wheelSize, setWheelSize] = useState(420); // safe starting value
   const [appState, setAppState] = useState<AppState>("wheel");
   const [discountPercentage, setDiscountPercentage] = useState<string>("");
   const [isVisible, setIsVisible] = useState(!autoShow);
   const [hasShown, setHasShown] = useState(false);
+  const [redrawCount, setRedrawCount] = useState(0); // force redraw trigger
 
-  // Handle auto-show with different triggers
+  // ────────────────────────────────────────────────
+  // Auto-show logic
+  // ────────────────────────────────────────────────
   useEffect(() => {
     if (!autoShow || hasShown) return;
 
     const showWheel = () => {
       setIsVisible(true);
       setHasShown(true);
+      // Force redraw shortly after visibility
+      setTimeout(() => setRedrawCount(c => c + 1), 150);
     };
 
     let timeoutId: NodeJS.Timeout;
@@ -63,17 +69,13 @@ export default function SpinWheel({
       case "delay":
         timeoutId = setTimeout(showWheel, showDelay);
         break;
-
       case "immediate":
         showWheel();
         break;
-
       case "scroll":
         scrollHandler = () => {
           const scrollPercent =
-            (window.scrollY /
-              (document.body.scrollHeight - window.innerHeight)) *
-            100;
+            (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100;
           if (scrollPercent > 70) {
             showWheel();
             window.removeEventListener("scroll", scrollHandler);
@@ -81,7 +83,6 @@ export default function SpinWheel({
         };
         window.addEventListener("scroll", scrollHandler);
         break;
-
       case "exit":
         mouseLeaveHandler = (e: MouseEvent) => {
           if (e.clientY <= 0 || e.relatedTarget === null) {
@@ -96,93 +97,88 @@ export default function SpinWheel({
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
       if (scrollHandler) window.removeEventListener("scroll", scrollHandler);
-      if (mouseLeaveHandler)
-        document.removeEventListener("mouseleave", mouseLeaveHandler);
+      if (mouseLeaveHandler) document.removeEventListener("mouseleave", mouseLeaveHandler);
     };
   }, [autoShow, trigger, showDelay, hasShown]);
 
-  // Update wheel size based on screen width and compact mode
-  useEffect(() => {
+  // ────────────────────────────────────────────────
+  // Dynamic wheel size (container-based)
+  // ────────────────────────────────────────────────
+  const updateWheelSize = useCallback(() => {
+    if (!containerRef.current) return;
+
+    const { width, height } = containerRef.current.getBoundingClientRect();
+    let size = Math.min(width, height, window.innerWidth * 0.92);
+
     if (compact) {
-      setWheelSize(300);
-      return;
+      size = Math.min(380, size);
+    } else {
+      size = Math.min(680, Math.max(420, size));
     }
 
-    const updateWheelSize = () => {
-      if (typeof window === "undefined") return;
+    if (Math.abs(size - wheelSize) > 5) {
+      setWheelSize(Math.round(size));
+      setRedrawCount(c => c + 1);
+    }
+  }, [compact, wheelSize]);
 
-      const screenWidth = window.innerWidth;
-      if (screenWidth < 640) {
-        // Mobile
-        setWheelSize(300);
-      } else if (screenWidth < 768) {
-        // Tablet
-        setWheelSize(400);
-      } else {
-        // Desktop
-        setWheelSize(500);
-      }
-    };
-
+  useEffect(() => {
     updateWheelSize();
+
+    const resizeObserver = new ResizeObserver(updateWheelSize);
+    if (containerRef.current) resizeObserver.observe(containerRef.current);
+
     window.addEventListener("resize", updateWheelSize);
 
-    return () => window.removeEventListener("resize", updateWheelSize);
-  }, [compact]);
+    // Multiple redraw attempts for iframe timing issues
+    const timers = [
+      setTimeout(updateWheelSize, 250),
+      setTimeout(() => setRedrawCount(c => c + 1), 450),
+      setTimeout(() => setRedrawCount(c => c + 1), 800),
+      setTimeout(() => setRedrawCount(c => c + 1), 1400),
+    ];
 
-  // Notify parent when wheel is closed (for embedded mode)
-  const handleClose = () => {
-    setIsVisible(false);
-    if (onClose) onClose(); // ← important!
-    if (embedded && window.parent !== window) {
-      window.parent.postMessage({ type: "spin-wheel-close" }, "*");
-    }
-  };
-
-  // Notify parent when discount is claimed (for embedded mode)
-  const handleDiscountClaimed = (discount: string) => {
-    if (embedded && window.parent !== window) {
-      window.parent.postMessage(
-        {
-          type: "discountClaimed",
-          discount: discount,
-        },
-        "*",
-      );
-    }
-  };
-
-  // Handle messages from parent (for embedded mode)
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data === "showSpinWheel") {
-        setIsVisible(true);
-      } else if (event.data === "hideSpinWheel") {
-        setIsVisible(false);
-      }
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateWheelSize);
+      timers.forEach(clearTimeout);
     };
+  }, [updateWheelSize]);
 
-    if (embedded) {
-      window.addEventListener("message", handleMessage);
-      return () => window.removeEventListener("message", handleMessage);
-    }
-  }, [embedded]);
+  // ────────────────────────────────────────────────
+  // Canvas drawing
+  // ────────────────────────────────────────────────
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Explicitly set dimensions (critical for correct rendering)
+    canvas.width = wheelSize;
+    canvas.height = wheelSize;
+
+    drawWheel(ctx, rotation, wheelSize);
+
+    // Debug log – remove later if not needed
+    console.log(`[DRAW] size=${wheelSize}px, redrawCount=${redrawCount}`);
+  }, [wheelSize, rotation, redrawCount, compact]);
+
+  // ────────────────────────────────────────────────
+  // drawWheel function
+  // ────────────────────────────────────────────────
   const drawWheel = (
     ctx: CanvasRenderingContext2D,
     currentRotation: number,
     size: number,
   ) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
+    const centerX = size / 2;
+    const centerY = size / 2;
     const radius = Math.min(centerX, centerY) - (compact ? 10 : 20);
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, size, size);
 
-    // Draw segments
     const segmentAngle = (2 * Math.PI) / PRIZES.length;
 
     PRIZES.forEach((prize, index) => {
@@ -190,7 +186,6 @@ export default function SpinWheel({
         index * segmentAngle - (currentRotation * Math.PI) / 180;
       const endAngle = startAngle + segmentAngle;
 
-      // Draw segment
       ctx.beginPath();
       ctx.moveTo(centerX, centerY);
       ctx.arc(centerX, centerY, radius, startAngle, endAngle);
@@ -201,7 +196,6 @@ export default function SpinWheel({
       ctx.lineWidth = WHEEL_CONFIG.segmentBorderWidth;
       ctx.stroke();
 
-      // Draw text - adjust font size based on wheel size
       const textAngle = startAngle + segmentAngle / 2;
       const textRadius = radius * 0.65;
       const textX = centerX + Math.cos(textAngle) * textRadius;
@@ -212,20 +206,15 @@ export default function SpinWheel({
       ctx.rotate(textAngle + Math.PI / 2);
       ctx.fillStyle = WHEEL_CONFIG.textColor;
 
-      // Responsive font size
       const fontSize =
-        size < 350
-          ? "bold 8px sans-serif"
-          : size < 400
-            ? "bold 10px sans-serif"
-            : size < 500
-              ? "bold 12px sans-serif"
-              : "bold 16px sans-serif";
+        size < 350 ? "bold 8px sans-serif" :
+        size < 400 ? "bold 10px sans-serif" :
+        size < 500 ? "bold 12px sans-serif" :
+        "bold 16px sans-serif";
       ctx.font = fontSize;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
-      // Truncate text if too long
       let displayText = prize.name;
       if (size < 350 && prize.name.length > 8) {
         displayText = prize.name.replace("% Discount", "%").slice(0, 8) + "...";
@@ -236,21 +225,13 @@ export default function SpinWheel({
       ctx.restore();
     });
 
-    // Draw center circle
+    // Center circle
     const centerCircleRadius = compact
       ? 15
-      : size < 400
-        ? 20
-        : size < 500
-          ? 25
-          : WHEEL_CONFIG.centerCircleRadius;
+      : size < 400 ? 20 : size < 500 ? 25 : WHEEL_CONFIG.centerCircleRadius;
     const centerGradient = ctx.createRadialGradient(
-      centerX,
-      centerY,
-      0,
-      centerX,
-      centerY,
-      centerCircleRadius,
+      centerX, centerY, 0,
+      centerX, centerY, centerCircleRadius
     );
     centerGradient.addColorStop(0, "rgba(255, 255, 255, 0.3)");
     centerGradient.addColorStop(1, "rgba(240, 240, 240, 0.2)");
@@ -263,20 +244,20 @@ export default function SpinWheel({
     ctx.lineWidth = WHEEL_CONFIG.segmentBorderWidth;
     ctx.stroke();
 
-    // Draw decorative inner circle
+    // Decorative inner circle
     ctx.beginPath();
     ctx.arc(
       centerX,
       centerY,
       centerCircleRadius - (compact ? 3 : 5),
       0,
-      2 * Math.PI,
+      2 * Math.PI
     );
     ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
     ctx.lineWidth = compact ? 1 : 2;
     ctx.stroke();
 
-    // Draw pointer indicator at top - responsive size
+    // Pointer
     const pointerSize = compact ? 8 : size < 400 ? 12 : size < 500 ? 15 : 18;
     const pointerHeight = compact ? 25 : size < 400 ? 40 : size < 500 ? 50 : 60;
 
@@ -287,10 +268,8 @@ export default function SpinWheel({
     ctx.closePath();
 
     const pointerGradient = ctx.createLinearGradient(
-      centerX - pointerSize,
-      10,
-      centerX + pointerSize,
-      pointerHeight,
+      centerX - pointerSize, 10,
+      centerX + pointerSize, pointerHeight
     );
     pointerGradient.addColorStop(0, "#ff0000");
     pointerGradient.addColorStop(1, "#cc0000");
@@ -301,7 +280,7 @@ export default function SpinWheel({
     ctx.lineWidth = compact ? 1 : 2;
     ctx.stroke();
 
-    // Add a highlight effect to the pointer
+    // Pointer highlight
     ctx.beginPath();
     ctx.moveTo(centerX - pointerSize * 0.7, 13);
     ctx.lineTo(centerX + pointerSize * 0.7, 13);
@@ -311,21 +290,9 @@ export default function SpinWheel({
     ctx.fill();
   };
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    // Set canvas size
-    canvas.width = wheelSize;
-    canvas.height = wheelSize;
-
-    drawWheel(ctx, rotation, wheelSize);
-  }, [rotation, wheelSize, compact]);
-
-  // Function to get which prize is at the pointer position
+  // ────────────────────────────────────────────────
+  // Get prize at pointer
+  // ────────────────────────────────────────────────
   const getPrizeAtPointer = (currentRotation: number): Prize => {
     const normalizedRotation = ((currentRotation % 360) + 360) % 360;
     const pointerAngle = 270;
@@ -336,6 +303,9 @@ export default function SpinWheel({
     return PRIZES[segmentIndex % PRIZES.length];
   };
 
+  // ────────────────────────────────────────────────
+  // Handle spin action
+  // ────────────────────────────────────────────────
   const handleSpin = () => {
     console.log("Spin button clicked!");
     if (isSpinning) return;
@@ -372,14 +342,13 @@ export default function SpinWheel({
         setIsSpinning(false);
         setWinner(winningPrize);
 
-        // Notify parent of win
         if (embedded && window.parent !== window) {
           window.parent.postMessage(
             {
               type: "prizeWon",
               prize: winningPrize,
             },
-            "*",
+            "*"
           );
         }
       }
@@ -388,10 +357,12 @@ export default function SpinWheel({
     requestAnimationFrame(animate);
   };
 
+  // ────────────────────────────────────────────────
+  // Claim discount → go to form
+  // ────────────────────────────────────────────────
   const handleClaimDiscount = () => {
     if (!winner) return;
 
-    // Extract discount percentage from prize name
     const discountMatch = winner.name.match(/(\d+)%/);
     const discountValue = discountMatch ? discountMatch[1] : "5";
 
@@ -400,6 +371,9 @@ export default function SpinWheel({
     handleDiscountClaimed(discountValue);
   };
 
+  // ────────────────────────────────────────────────
+  // Back to wheel from form
+  // ────────────────────────────────────────────────
   const handleBackToWheel = () => {
     setWinner(null);
     setAppState("wheel");
@@ -408,7 +382,32 @@ export default function SpinWheel({
     }
   };
 
-  // Calculate button size based on wheel size
+  // ────────────────────────────────────────────────
+  // Close handler
+  // ────────────────────────────────────────────────
+  const handleClose = useCallback(() => {
+    setIsVisible(false);
+    if (onClose) onClose();
+    if (embedded && window.parent !== window) {
+      window.parent.postMessage({ type: "spin-wheel-close" }, "*");
+    }
+  }, [onClose, embedded]);
+
+  // ────────────────────────────────────────────────
+  // Discount claimed notification
+  // ────────────────────────────────────────────────
+  const handleDiscountClaimed = (discount: string) => {
+    if (embedded && window.parent !== window) {
+      window.parent.postMessage(
+        {
+          type: "discountClaimed",
+          discount,
+        },
+        "*"
+      );
+    }
+  };
+
   const buttonSize = compact
     ? 60
     : wheelSize < 400
@@ -417,30 +416,16 @@ export default function SpinWheel({
         ? 100
         : 128;
 
-  // Render the DiscountForm if in form or coupon state
-  if (appState === "form") {
-    return (
-      <DiscountForm
-        discount={discountPercentage}
-        onBack={handleBackToWheel}
-        compact={compact}
-      />
-    );
-  }
-
-  // If autoShow is enabled and not visible, don't render
-  if (autoShow && !isVisible) {
-    return null;
-  }
-
-  // Main wheel UI
+  // ────────────────────────────────────────────────
+  // Main wheel content
+  // ────────────────────────────────────────────────
   const WheelContent = () => (
     <main
       className={`
-      ${compact ? "bg-transparent p-2" : "min-h-screen p-4"}
-      ${!compact ? "bg-gradient-to-br from-amber-50 via-white to-orange-100" : ""}
-      flex flex-col items-center justify-center gap-6
-    `}
+        ${compact ? "bg-transparent p-2" : "min-h-full p-4"}
+        ${!compact ? "bg-gradient-to-br from-amber-50 via-white to-orange-100" : ""}
+        flex flex-col items-center justify-center gap-6 w-full h-full
+      `}
     >
       {!compact && (
         <div className="text-center space-y-2 md:space-y-3">
@@ -453,24 +438,24 @@ export default function SpinWheel({
         </div>
       )}
 
-      {/* Wheel Container */}
       <div
         ref={containerRef}
-        className="relative"
-        style={{ width: wheelSize, height: wheelSize }}
+        className="relative w-full h-full flex items-center justify-center min-h-[380px]"
       >
-        {/* Canvas Wheel */}
         <canvas
           ref={canvasRef}
           width={wheelSize}
           height={wheelSize}
-          className={`drop-shadow-xl md:drop-shadow-2xl absolute top-0 left-0 pointer-events-none
-            ${compact ? "drop-shadow-lg" : ""}`}
-          style={{ pointerEvents: "none" }}
+          className="drop-shadow-2xl"
+          style={{
+            maxWidth: "100%",
+            maxHeight: "100%",
+            width: "auto",
+            height: "auto",
+          }}
         />
 
-        {/* Spin Button positioned at the center */}
-        <div className="absolute inset-0 flex items-center justify-center z-10">
+        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-auto">
           <motion.div
             animate={isSpinning ? { scale: [1, 1.1, 1] } : { scale: 1 }}
             transition={{ repeat: isSpinning ? Infinity : 0, duration: 0.5 }}
@@ -480,15 +465,11 @@ export default function SpinWheel({
               onClick={handleSpin}
               disabled={isSpinning}
               className={`
-                rounded-full 
-                bg-gradient-to-br from-orange-500 via-pink-500 to-red-600
+                rounded-full bg-gradient-to-br from-orange-500 via-pink-500 to-red-600
                 hover:from-orange-600 hover:via-pink-600 hover:to-red-700
-                text-white font-bold
-                shadow-xl md:shadow-2xl hover:shadow-3xl
-                border-4 border-white
-                transform transition-all duration-300
-                hover:scale-105 active:scale-95
-                relative z-20
+                text-white font-bold shadow-xl md:shadow-2xl hover:shadow-3xl
+                border-4 border-white transform transition-all duration-300
+                hover:scale-105 active:scale-95 relative z-20
                 ${isSpinning ? "cursor-not-allowed opacity-90" : ""}
                 ${compact ? "border-2" : ""}
               `}
@@ -499,20 +480,14 @@ export default function SpinWheel({
             >
               <div className="flex flex-col items-center justify-center">
                 {isSpinning ? (
-                  <>
-                    <span
-                      className={compact ? "text-xs" : "text-sm md:text-base"}
-                    >
-                      Spinning...
-                    </span>
-                  </>
+                  <span className={compact ? "text-xs" : "text-sm md:text-base"}>
+                    Spinning...
+                  </span>
                 ) : (
                   <>
                     <span
                       className={
-                        compact
-                          ? "text-base font-black"
-                          : "text-xl md:text-2xl font-black"
+                        compact ? "text-base font-black" : "text-xl md:text-2xl font-black"
                       }
                     >
                       SPIN
@@ -527,7 +502,6 @@ export default function SpinWheel({
               </div>
             </Button>
 
-            {/* Decorative ring around button */}
             {!compact && (
               <>
                 <div className="absolute inset-0 rounded-full border-4 border-white/30 -m-2"></div>
@@ -537,15 +511,15 @@ export default function SpinWheel({
           </motion.div>
         </div>
 
-        {/* Pointer decoration */}
-        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-2 z-5">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 z-5 pointer-events-none">
           <div className="w-[5px] bg-gradient-to-b from-red-600 to-red-800 mx-auto"></div>
         </div>
       </div>
 
-      {/* Winner Banner - Responsive */}
       <div
-        className={`flex flex-col items-center ${compact ? "gap-2" : "gap-4 md:gap-6"} w-full ${compact ? "max-w-xs" : "max-w-md"}`}
+        className={`flex flex-col items-center ${
+          compact ? "gap-2" : "gap-4 md:gap-6"
+        } w-full ${compact ? "max-w-xs" : "max-w-md"}`}
       >
         {winner && (
           <motion.div
@@ -570,19 +544,25 @@ export default function SpinWheel({
               `}
             >
               <p
-                className={`text-gray-700 text-center ${compact ? "mb-2" : "mb-4"}`}
+                className={`text-gray-700 text-center ${
+                  compact ? "mb-2" : "mb-4"
+                }`}
               >
                 <span
-                  className={`font-bold text-emerald-600 ${compact ? "text-lg" : "text-xl"}`}
+                  className={`font-bold text-emerald-600 ${
+                    compact ? "text-lg" : "text-xl"
+                  }`}
                 >
                   {winner.name}
                 </span>
               </p>
               <p
-                className={`text-gray-600 text-center ${compact ? "mb-4 text-sm" : "mb-6 text-sm md:text-base"}`}
+                className={`text-gray-600 text-center ${
+                  compact ? "mb-4 text-sm" : "mb-6 text-sm md:text-base"
+                }`}
               >
-                We've reserved your {winner.name.replace("% Discount", "%")} for
-                the next 15 minutes!
+                We've reserved your {winner.name.replace("% Discount", "%")}{" "}
+                for the next 15 minutes!
               </p>
 
               <Button
@@ -606,21 +586,14 @@ export default function SpinWheel({
         )}
       </div>
 
-      {/* Add custom CSS for spin animation */}
       <style jsx global>{`
         @keyframes spin {
-          0% {
-            transform: rotate(0deg);
-          }
-          100% {
-            transform: rotate(360deg);
-          }
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
         }
         .animate-spin {
           animation: spin 1s linear infinite;
         }
-
-        /* Mobile optimizations */
         @media (max-width: 640px) {
           .text-responsive {
             font-size: clamp(0.875rem, 3vw, 1rem);
@@ -630,17 +603,36 @@ export default function SpinWheel({
     </main>
   );
 
-  // If compact mode with autoShow, wrap in popup overlay
+  // ────────────────────────────────────────────────
+  // Render logic
+  // ────────────────────────────────────────────────
+  if (appState === "form") {
+    return (
+      <DiscountForm
+        discount={discountPercentage}
+        onBack={() => {
+          setWinner(null);
+          setAppState("wheel");
+          if (compact && autoShow) handleClose();
+        }}
+        compact={compact}
+      />
+    );
+  }
+
+  if (autoShow && !isVisible) return null;
+
   if (compact && autoShow && isVisible) {
     return (
       <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center p-4">
-        <div className="relative bg-white rounded-2xl shadow-2xl overflow-hidden max-w-md w-full">
+        <div className="relative bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-lg aspect-[4/5] max-h-[85vh]">
           {showCloseButton && (
             <button
               onClick={handleClose}
-              className="absolute top-3 right-3 z-50 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:shadow-lg transition-shadow"
+              className="absolute top-4 right-4 z-50 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all border border-gray-200"
+              aria-label="Close spin wheel"
             >
-              <X size={18} />
+              <X size={20} />
             </button>
           )}
           <WheelContent />
