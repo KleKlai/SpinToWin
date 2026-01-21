@@ -1,162 +1,171 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { motion } from 'framer-motion'
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
 
 interface DiscountFormProps {
-  discount: string
-  onBack?: () => void
-  compact?: boolean
+  discount: string;
+  onBack?: () => void;
+  compact?: boolean;
 }
 
-export default function DiscountForm({ discount, onBack, compact = false }: DiscountFormProps) {
-  const [email, setEmail] = useState('')
-  const [fullName, setFullName] = useState('')
-  const [mobile, setMobile] = useState('')
-  const [isSubmitted, setIsSubmitted] = useState(false)
-  const [couponCode, setCouponCode] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+export default function DiscountForm({
+  discount,
+  onBack,
+  compact = false,
+}: DiscountFormProps) {
+  const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{
-    email?: string
-    fullName?: string
-    mobile?: string
-  }>({})
+    email?: string;
+    fullName?: string;
+    mobile?: string;
+  }>({});
 
   // API Configuration using environment variables
   const API_CONFIG = {
-    endpoint: 'https://services.leadconnectorhq.com/contacts/',
-    authToken: process.env.NEXT_PUBLIC_GH_AUTH_TOKEN || '',
-    locationId: process.env.NEXT_PUBLIC_GH_LOCATION_ID || ''
-  }
+    endpoint: "https://services.leadconnectorhq.com/contacts/",
+    authToken: process.env.NEXT_PUBLIC_GH_AUTH_TOKEN || "",
+    locationId: process.env.NEXT_PUBLIC_GH_LOCATION_ID || "",
+  };
 
   // Generate a coupon code
   const generateCouponCode = () => {
-    const prefix = ''
-    const randomNum = Math.floor(1000 + Math.random() * 9000)
-    const randomChars = Math.random().toString(36).substring(2, 6).toUpperCase()
-    return `${prefix}${discount}${randomNum}${randomChars}`
-  }
+    const prefix = "";
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    const randomChars = Math.random()
+      .toString(36)
+      .substring(2, 6)
+      .toUpperCase();
+    return `${prefix}${discount}${randomNum}${randomChars}`;
+  };
 
   // Validate mobile number
   const validateMobile = (phone: string): boolean => {
     // Basic mobile validation - at least 10 digits, can include +, spaces, dashes
-    const cleaned = phone.replace(/[\s\-+()]/g, '')
-    return cleaned.length >= 10 && /^\d+$/.test(cleaned)
-  }
+    const cleaned = phone.replace(/[\s\-+()]/g, "");
+    return cleaned.length >= 10 && /^\d+$/.test(cleaned);
+  };
 
   // Validate email
   const validateEmail = (email: string): boolean => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return re.test(email)
-  }
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
 
   // Validate form
   const validateForm = (): boolean => {
-    const errors: { email?: string; fullName?: string; mobile?: string } = {}
-    let isValid = true
+    const errors: { email?: string; fullName?: string; mobile?: string } = {};
+    let isValid = true;
 
     // Email validation
     if (!email.trim()) {
-      errors.email = 'Email is required'
-      isValid = false
+      errors.email = "Email is required";
+      isValid = false;
     } else if (!validateEmail(email)) {
-      errors.email = 'Please enter a valid email address'
-      isValid = false
+      errors.email = "Please enter a valid email address";
+      isValid = false;
     }
 
     // Full name validation
     if (!fullName.trim()) {
-      errors.fullName = 'Full name is required'
-      isValid = false
-    } else if (fullName.trim().split(' ').length < 2) {
-      errors.fullName = 'Please enter your full name (first and last)'
-      isValid = false
+      errors.fullName = "Full name is required";
+      isValid = false;
+    } else if (fullName.trim().split(" ").length < 2) {
+      errors.fullName = "Please enter your full name (first and last)";
+      isValid = false;
     }
 
     // Mobile validation
     if (!mobile.trim()) {
-      errors.mobile = 'Mobile number is required'
-      isValid = false
+      errors.mobile = "Mobile number is required";
+      isValid = false;
     } else if (!validateMobile(mobile)) {
-      errors.mobile = 'Please enter a valid mobile number (at least 10 digits)'
-      isValid = false
+      errors.mobile = "Please enter a valid mobile number (at least 10 digits)";
+      isValid = false;
     }
 
-    setFieldErrors(errors)
-    return isValid
-  }
+    setFieldErrors(errors);
+    return isValid;
+  };
 
   // Format phone number for display
   const formatPhoneNumber = (phone: string): string => {
     // Remove all non-digits
-    const cleaned = phone.replace(/\D/g, '')
-    
+    const cleaned = phone.replace(/\D/g, "");
+
     // Format based on length
     if (cleaned.length <= 3) {
-      return cleaned
+      return cleaned;
     } else if (cleaned.length <= 6) {
-      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
     } else if (cleaned.length <= 10) {
-      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
     } else {
-      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
     }
-  }
+  };
 
   // Handle mobile input change with formatting
   const handleMobileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.target.value.replace(/\D/g, '') // Remove non-digits
-    const formatted = formatPhoneNumber(input)
-    setMobile(formatted)
-    
+    const input = e.target.value.replace(/\D/g, ""); // Remove non-digits
+    const formatted = formatPhoneNumber(input);
+    setMobile(formatted);
+
     // Clear mobile error when user starts typing
     if (fieldErrors.mobile) {
-      setFieldErrors(prev => ({ ...prev, mobile: undefined }))
+      setFieldErrors((prev) => ({ ...prev, mobile: undefined }));
     }
-  }
+  };
 
   // Handle input change with error clearing
-  const handleInputChange = (
-    setter: React.Dispatch<React.SetStateAction<string>>,
-    field: keyof typeof fieldErrors
-  ) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setter(e.target.value)
-    // Clear field error when user starts typing
-    if (fieldErrors[field]) {
-      setFieldErrors(prev => ({ ...prev, [field]: undefined }))
-    }
-  }
+  const handleInputChange =
+    (
+      setter: React.Dispatch<React.SetStateAction<string>>,
+      field: keyof typeof fieldErrors,
+    ) =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setter(e.target.value);
+      // Clear field error when user starts typing
+      if (fieldErrors[field]) {
+        setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+      }
+    };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    
+    e.preventDefault();
+    setError(null);
+
     // Validate form
     if (!validateForm()) {
-      return
+      return;
     }
 
     // Check if environment variables are set
     if (!API_CONFIG.authToken || !API_CONFIG.locationId) {
-      setError('Configuration error. Please contact support.')
-      console.error('Missing environment variables')
-      return
+      setError("Configuration error. Please contact support.");
+      console.error("Missing environment variables");
+      return;
     }
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
     try {
       // Generate coupon code
-      const newCouponCode = generateCouponCode()
-      
+      const newCouponCode = generateCouponCode();
+
       // Prepare phone number for API (remove formatting)
-      const phoneForApi = mobile.replace(/\D/g, '')
-      
+      const phoneForApi = mobile.replace(/\D/g, "");
+
       // Extract first name from full name
-      const firstName = fullName.trim().split(' ')[0] || fullName
-      
+      const firstName = fullName.trim().split(" ")[0] || fullName;
+
       const requestBody = {
         locationId: API_CONFIG.locationId,
         firstName: firstName,
@@ -165,61 +174,65 @@ export default function DiscountForm({ discount, onBack, compact = false }: Disc
         customFields: [
           {
             id: "spintowin_coupon",
-            value: newCouponCode
+            value: newCouponCode,
           },
           {
             id: "spintowincoupon_discount",
-            value: `${discount}%`
-          }
-        ]
-      }
+            value: `${discount}%`,
+          },
+        ],
+      };
 
       // Send data to GoHighLevel API
       const response = await fetch(API_CONFIG.endpoint, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${API_CONFIG.authToken}`,
-          'Version': '2021-07-28',
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${API_CONFIG.authToken}`,
+          Version: "2021-07-28",
+          Accept: "application/json",
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(requestBody)
-      })
+        body: JSON.stringify(requestBody),
+      });
 
       if (!response.ok) {
-        let errorMessage = 'Failed to submit form'
+        let errorMessage = "Failed to submit form";
         try {
-          const errorData = await response.json()
-          errorMessage = errorData.message || errorMessage
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
         } catch (parseError) {
-          errorMessage = `Server error: ${response.status}`
+          errorMessage = `Server error: ${response.status}`;
         }
-        throw new Error(errorMessage)
+        throw new Error(errorMessage);
       }
 
       // API call successful - set coupon code and show success
-      setCouponCode(newCouponCode)
-      setIsSubmitted(true)
-      
+      setCouponCode(newCouponCode);
+      setIsSubmitted(true);
     } catch (err) {
-      console.error('Error submitting form:', err)
-      setError(err instanceof Error ? err.message : 'Failed to submit form. Please try again.')
+      console.error("Error submitting form:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to submit form. Please try again.",
+      );
       // DO NOT show coupon code on API error
-      setIsSubmitted(false)
+      setIsSubmitted(false);
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(couponCode)
+    navigator.clipboard
+      .writeText(couponCode)
       .then(() => {
-        alert('Coupon code copied to clipboard!')
+        alert("Coupon code copied to clipboard!");
       })
-      .catch(err => {
-        console.error('Failed to copy: ', err)
-      })
-  }
+      .catch((err) => {
+        console.error("Failed to copy: ", err);
+      });
+  };
 
   if (isSubmitted) {
     return (
@@ -248,7 +261,9 @@ export default function DiscountForm({ discount, onBack, compact = false }: Disc
           >
             <div className="text-center space-y-6">
               <div>
-                <p className="text-gray-500 mb-2 text-sm md:text-base">Your Exclusive Coupon Code</p>
+                <p className="text-gray-500 mb-2 text-sm md:text-base">
+                  Your Exclusive Coupon Code
+                </p>
                 <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent break-all px-2">
                   {couponCode}
                 </div>
@@ -256,7 +271,7 @@ export default function DiscountForm({ discount, onBack, compact = false }: Disc
                   Discount: {discount}% off
                 </p>
               </div>
-              
+
               <Button
                 onClick={handleCopyCode}
                 size="lg"
@@ -264,7 +279,7 @@ export default function DiscountForm({ discount, onBack, compact = false }: Disc
               >
                 📋 Copy Code
               </Button>
-              
+
               <div className="space-y-2">
                 <p className="text-sm text-gray-600">
                   ✅ Your details have been saved
@@ -275,18 +290,19 @@ export default function DiscountForm({ discount, onBack, compact = false }: Disc
               </div>
             </div>
           </motion.div>
-          
         </motion.div>
       </main>
-    )
+    );
   }
 
   return (
-    <main className={`
-      ${compact ? 'p-4' : 'min-h-screen p-4'}
-      ${!compact ? 'bg-gradient-to-br from-emerald-50 via-white to-green-100' : ''}
+    <main
+      className={`
+      ${compact ? "p-4" : "min-h-screen p-4"}
+      ${!compact ? "bg-gradient-to-br from-emerald-50 via-white to-green-100" : ""}
       flex flex-col items-center justify-center gap-6
-    `}>
+    `}
+    >
       <motion.div
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
@@ -310,7 +326,9 @@ export default function DiscountForm({ discount, onBack, compact = false }: Disc
             className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-xl"
           >
             <p className="text-sm font-medium">{error}</p>
-            <p className="text-xs mt-1">Please check your information and try again.</p>
+            <p className="text-xs mt-1">
+              Please check your information and try again.
+            </p>
           </motion.div>
         )}
 
@@ -328,13 +346,13 @@ export default function DiscountForm({ discount, onBack, compact = false }: Disc
               type="email"
               required
               value={email}
-              onChange={handleInputChange(setEmail, 'email')}
-              className={`w-full px-4 py-3 text-base md:text-lg rounded-xl border-2 focus:ring-2 focus:ring-orange-200 outline-none transition-all ${
-                fieldErrors.email 
-                  ? 'border-red-500 focus:border-red-500' 
-                  : 'border-gray-300 focus:border-orange-500'
+              onChange={handleInputChange(setEmail, "email")}
+              className={`w-full px-4 py-3 text-base md:text-lg rounded-xl border-2 outline-none transition-all ${
+                fieldErrors.email
+                  ? "border-red-500 focus:ring-2 focus:ring-red-200"
+                  : "border-gray-300 focus:border-[#30F2F2] focus:ring-4 focus:ring-[#1A2980]/10"
               }`}
-              placeholder="you@example.com"
+              placeholder="johndoe@gmail.com"
               disabled={isSubmitting}
               inputMode="email"
               autoComplete="email"
@@ -357,18 +375,20 @@ export default function DiscountForm({ discount, onBack, compact = false }: Disc
               type="text"
               required
               value={fullName}
-              onChange={handleInputChange(setFullName, 'fullName')}
-              className={`w-full px-4 py-3 text-base md:text-lg rounded-xl border-2 focus:ring-2 focus:ring-orange-200 outline-none transition-all ${
-                fieldErrors.fullName 
-                  ? 'border-red-500 focus:border-red-500' 
-                  : 'border-gray-300 focus:border-orange-500'
+              onChange={handleInputChange(setFullName, "fullName")}
+              className={`w-full px-4 py-3 text-base md:text-lg rounded-xl border-2 outline-none transition-all ${
+                fieldErrors.fullName
+                  ? "border-red-500 focus:ring-2 focus:ring-red-200"
+                  : "border-gray-300 focus:border-[#30F2F2] focus:ring-4 focus:ring-[#1A2980]/10"
               }`}
-              placeholder="John Smith"
+              placeholder="John Doe"
               disabled={isSubmitting}
               autoComplete="name"
             />
             {fieldErrors.fullName && (
-              <p className="text-red-500 text-xs mt-1">{fieldErrors.fullName}</p>
+              <p className="text-red-500 text-xs mt-1">
+                {fieldErrors.fullName}
+              </p>
             )}
           </motion.div>
 
@@ -386,10 +406,10 @@ export default function DiscountForm({ discount, onBack, compact = false }: Disc
               required
               value={mobile}
               onChange={handleMobileChange}
-              className={`w-full px-4 py-3 text-base md:text-lg rounded-xl border-2 focus:ring-2 focus:ring-orange-200 outline-none transition-all ${
-                fieldErrors.mobile 
-                  ? 'border-red-500 focus:border-red-500' 
-                  : 'border-gray-300 focus:border-orange-500'
+              className={`w-full px-4 py-3 text-base md:text-lg rounded-xl border-2 outline-none transition-all ${
+                fieldErrors.mobile
+                  ? "border-red-500 focus:ring-2 focus:ring-red-200"
+                  : "border-gray-300 focus:border-[#30F2F2] focus:ring-4 focus:ring-[#1A2980]/10"
               }`}
               placeholder="(123) 456-7890"
               disabled={isSubmitting}
@@ -415,13 +435,29 @@ export default function DiscountForm({ discount, onBack, compact = false }: Disc
               type="submit"
               size="lg"
               disabled={isSubmitting}
-              className="w-full py-4 md:py-6 text-base md:text-lg bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold rounded-2xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-4 md:py-6 text-base md:text-lg bg-gradient-to-r from-[#30F2F2] to-[#1A2980] hover:brightness-110 text-white font-bold rounded-2xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {isSubmitting ? (
                 <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg
+                    className="animate-spin h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
                   Processing...
                 </span>
@@ -433,9 +469,12 @@ export default function DiscountForm({ discount, onBack, compact = false }: Disc
         </form>
 
         <div className="text-xs text-gray-500 text-center">
-          <p>By submitting, you agree to receive the discount code via email and SMS</p>
+          <p>
+            By submitting, you agree to receive the discount code via email and
+            SMS
+          </p>
         </div>
       </motion.div>
     </main>
-  )
+  );
 }

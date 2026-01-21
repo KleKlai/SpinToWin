@@ -17,8 +17,8 @@ export const DEFAULT_WHEEL_PRIZES: Prize[] = [
   { id: 1, name: '25% Discount', color: '#FF5733', probability: 0.04 },
   { id: 2, name: '5% Discount', color: '#33FF57', probability: 0.8 },
   { id: 3, name: '15% Discount', color: '#3357FF', probability: 0.1 },
-  { id: 4, name: '50% Discount', color: '#F333FF', probability: 0.01 },
-  { id: 5, name: '10% Discount', color: '#FFC300', probability: 0.05 },
+  { id: 4, name: '50% Discount', color: '#F333FF', probability: 0.001 },
+  { id: 5, name: '1% Discount', color: '#FFC300', probability: 0.05 },
 ]
 
 export function transformAPIPrizes(apiPrizes: APIPrize[]): Prize[] {

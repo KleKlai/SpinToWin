@@ -1,4 +1,3 @@
-// components/spin-wheel.tsx
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
@@ -41,24 +40,22 @@ export default function SpinWheel({
   const [rotation, setRotation] = useState(0);
   const [isSpinning, setIsSpinning] = useState(false);
   const [winner, setWinner] = useState<Prize | null>(null);
-  const [wheelSize, setWheelSize] = useState(420); // safe starting value
+  const [wheelSize, setWheelSize] = useState(420);
   const [appState, setAppState] = useState<AppState>("wheel");
   const [discountPercentage, setDiscountPercentage] = useState<string>("");
   const [isVisible, setIsVisible] = useState(!autoShow);
   const [hasShown, setHasShown] = useState(false);
-  const [redrawCount, setRedrawCount] = useState(0); // force redraw trigger
+  const [redrawCount, setRedrawCount] = useState(0);
+  const [showTitleAndButton, setShowTitleAndButton] = useState(true); // ← NEW
 
-  // ────────────────────────────────────────────────
   // Auto-show logic
-  // ────────────────────────────────────────────────
   useEffect(() => {
     if (!autoShow || hasShown) return;
 
     const showWheel = () => {
       setIsVisible(true);
       setHasShown(true);
-      // Force redraw shortly after visibility
-      setTimeout(() => setRedrawCount(c => c + 1), 150);
+      setTimeout(() => setRedrawCount((c) => c + 1), 150);
     };
 
     let timeoutId: NodeJS.Timeout;
@@ -75,7 +72,9 @@ export default function SpinWheel({
       case "scroll":
         scrollHandler = () => {
           const scrollPercent =
-            (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100;
+            (window.scrollY /
+              (document.body.scrollHeight - window.innerHeight)) *
+            100;
           if (scrollPercent > 70) {
             showWheel();
             window.removeEventListener("scroll", scrollHandler);
@@ -97,13 +96,12 @@ export default function SpinWheel({
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
       if (scrollHandler) window.removeEventListener("scroll", scrollHandler);
-      if (mouseLeaveHandler) document.removeEventListener("mouseleave", mouseLeaveHandler);
+      if (mouseLeaveHandler)
+        document.removeEventListener("mouseleave", mouseLeaveHandler);
     };
   }, [autoShow, trigger, showDelay, hasShown]);
 
-  // ────────────────────────────────────────────────
-  // Dynamic wheel size (container-based)
-  // ────────────────────────────────────────────────
+  // Dynamic size
   const updateWheelSize = useCallback(() => {
     if (!containerRef.current) return;
 
@@ -118,7 +116,7 @@ export default function SpinWheel({
 
     if (Math.abs(size - wheelSize) > 5) {
       setWheelSize(Math.round(size));
-      setRedrawCount(c => c + 1);
+      setRedrawCount((c) => c + 1);
     }
   }, [compact, wheelSize]);
 
@@ -130,12 +128,11 @@ export default function SpinWheel({
 
     window.addEventListener("resize", updateWheelSize);
 
-    // Multiple redraw attempts for iframe timing issues
     const timers = [
       setTimeout(updateWheelSize, 250),
-      setTimeout(() => setRedrawCount(c => c + 1), 450),
-      setTimeout(() => setRedrawCount(c => c + 1), 800),
-      setTimeout(() => setRedrawCount(c => c + 1), 1400),
+      setTimeout(() => setRedrawCount((c) => c + 1), 450),
+      setTimeout(() => setRedrawCount((c) => c + 1), 800),
+      setTimeout(() => setRedrawCount((c) => c + 1), 1400),
     ];
 
     return () => {
@@ -145,9 +142,7 @@ export default function SpinWheel({
     };
   }, [updateWheelSize]);
 
-  // ────────────────────────────────────────────────
   // Canvas drawing
-  // ────────────────────────────────────────────────
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -155,19 +150,15 @@ export default function SpinWheel({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Explicitly set dimensions (critical for correct rendering)
     canvas.width = wheelSize;
     canvas.height = wheelSize;
 
     drawWheel(ctx, rotation, wheelSize);
 
-    // Debug log – remove later if not needed
     console.log(`[DRAW] size=${wheelSize}px, redrawCount=${redrawCount}`);
   }, [wheelSize, rotation, redrawCount, compact]);
 
-  // ────────────────────────────────────────────────
-  // drawWheel function
-  // ────────────────────────────────────────────────
+  // drawWheel (unchanged)
   const drawWheel = (
     ctx: CanvasRenderingContext2D,
     currentRotation: number,
@@ -207,10 +198,13 @@ export default function SpinWheel({
       ctx.fillStyle = WHEEL_CONFIG.textColor;
 
       const fontSize =
-        size < 350 ? "bold 8px sans-serif" :
-        size < 400 ? "bold 10px sans-serif" :
-        size < 500 ? "bold 12px sans-serif" :
-        "bold 16px sans-serif";
+        size < 350
+          ? "bold 8px sans-serif"
+          : size < 400
+            ? "bold 10px sans-serif"
+            : size < 500
+              ? "bold 12px sans-serif"
+              : "bold 16px sans-serif";
       ctx.font = fontSize;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -228,10 +222,18 @@ export default function SpinWheel({
     // Center circle
     const centerCircleRadius = compact
       ? 15
-      : size < 400 ? 20 : size < 500 ? 25 : WHEEL_CONFIG.centerCircleRadius;
+      : size < 400
+        ? 20
+        : size < 500
+          ? 25
+          : WHEEL_CONFIG.centerCircleRadius;
     const centerGradient = ctx.createRadialGradient(
-      centerX, centerY, 0,
-      centerX, centerY, centerCircleRadius
+      centerX,
+      centerY,
+      0,
+      centerX,
+      centerY,
+      centerCircleRadius,
     );
     centerGradient.addColorStop(0, "rgba(255, 255, 255, 0.3)");
     centerGradient.addColorStop(1, "rgba(240, 240, 240, 0.2)");
@@ -251,7 +253,7 @@ export default function SpinWheel({
       centerY,
       centerCircleRadius - (compact ? 3 : 5),
       0,
-      2 * Math.PI
+      2 * Math.PI,
     );
     ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
     ctx.lineWidth = compact ? 1 : 2;
@@ -268,8 +270,10 @@ export default function SpinWheel({
     ctx.closePath();
 
     const pointerGradient = ctx.createLinearGradient(
-      centerX - pointerSize, 10,
-      centerX + pointerSize, pointerHeight
+      centerX - pointerSize,
+      10,
+      centerX + pointerSize,
+      pointerHeight,
     );
     pointerGradient.addColorStop(0, "#ff0000");
     pointerGradient.addColorStop(1, "#cc0000");
@@ -290,9 +294,6 @@ export default function SpinWheel({
     ctx.fill();
   };
 
-  // ────────────────────────────────────────────────
-  // Get prize at pointer
-  // ────────────────────────────────────────────────
   const getPrizeAtPointer = (currentRotation: number): Prize => {
     const normalizedRotation = ((currentRotation % 360) + 360) % 360;
     const pointerAngle = 270;
@@ -303,9 +304,6 @@ export default function SpinWheel({
     return PRIZES[segmentIndex % PRIZES.length];
   };
 
-  // ────────────────────────────────────────────────
-  // Handle spin action
-  // ────────────────────────────────────────────────
   const handleSpin = () => {
     console.log("Spin button clicked!");
     if (isSpinning) return;
@@ -342,13 +340,16 @@ export default function SpinWheel({
         setIsSpinning(false);
         setWinner(winningPrize);
 
+        // Hide title and button after win
+        setShowTitleAndButton(false);
+
         if (embedded && window.parent !== window) {
           window.parent.postMessage(
             {
               type: "prizeWon",
               prize: winningPrize,
             },
-            "*"
+            "*",
           );
         }
       }
@@ -357,9 +358,6 @@ export default function SpinWheel({
     requestAnimationFrame(animate);
   };
 
-  // ────────────────────────────────────────────────
-  // Claim discount → go to form
-  // ────────────────────────────────────────────────
   const handleClaimDiscount = () => {
     if (!winner) return;
 
@@ -371,20 +369,15 @@ export default function SpinWheel({
     handleDiscountClaimed(discountValue);
   };
 
-  // ────────────────────────────────────────────────
-  // Back to wheel from form
-  // ────────────────────────────────────────────────
   const handleBackToWheel = () => {
     setWinner(null);
     setAppState("wheel");
+    setShowTitleAndButton(true); // ← Show title & button again when returning
     if (compact && autoShow) {
       handleClose();
     }
   };
 
-  // ────────────────────────────────────────────────
-  // Close handler
-  // ────────────────────────────────────────────────
   const handleClose = useCallback(() => {
     setIsVisible(false);
     if (onClose) onClose();
@@ -393,9 +386,6 @@ export default function SpinWheel({
     }
   }, [onClose, embedded]);
 
-  // ────────────────────────────────────────────────
-  // Discount claimed notification
-  // ────────────────────────────────────────────────
   const handleDiscountClaimed = (discount: string) => {
     if (embedded && window.parent !== window) {
       window.parent.postMessage(
@@ -403,7 +393,7 @@ export default function SpinWheel({
           type: "discountClaimed",
           discount,
         },
-        "*"
+        "*",
       );
     }
   };
@@ -417,23 +407,22 @@ export default function SpinWheel({
         : 128;
 
   // ────────────────────────────────────────────────
-  // Main wheel content
+  // Main content
   // ────────────────────────────────────────────────
   const WheelContent = () => (
     <main
       className={`
         ${compact ? "bg-transparent p-2" : "min-h-full p-4"}
-        ${!compact ? "bg-gradient-to-br from-amber-50 via-white to-orange-100" : ""}
         flex flex-col items-center justify-center gap-6 w-full h-full
       `}
     >
-      {!compact && (
+      {showTitleAndButton && !compact && (
         <div className="text-center space-y-2 md:space-y-3">
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-            Spin The Wheel
+          <h1 className="text-3xl md:text-2xl lg:text-4xl font-bold bg-gradient-to-r from-[#30F2F2] to-[#30F2F2] bg-clip-text text-transparent">
+            Unlock Your AI Edge
           </h1>
           <p className="text-gray-700 text-base md:text-lg font-medium">
-            Try your luck and win amazing prizes!
+            Spin the wheel to claim an exclusive discount on our Pro plans. Let our neural networks power your productivity for less.
           </p>
         </div>
       )}
@@ -455,61 +444,67 @@ export default function SpinWheel({
           }}
         />
 
-        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-auto">
-          <motion.div
-            animate={isSpinning ? { scale: [1, 1.1, 1] } : { scale: 1 }}
-            transition={{ repeat: isSpinning ? Infinity : 0, duration: 0.5 }}
-            className="relative"
-          >
-            <Button
-              onClick={handleSpin}
-              disabled={isSpinning}
-              className={`
-                rounded-full bg-gradient-to-br from-orange-500 via-pink-500 to-red-600
-                hover:from-orange-600 hover:via-pink-600 hover:to-red-700
-                text-white font-bold shadow-xl md:shadow-2xl hover:shadow-3xl
-                border-4 border-white transform transition-all duration-300
-                hover:scale-105 active:scale-95 relative z-20
-                ${isSpinning ? "cursor-not-allowed opacity-90" : ""}
-                ${compact ? "border-2" : ""}
-              `}
-              style={{
-                width: buttonSize,
-                height: buttonSize,
-              }}
+        {showTitleAndButton && (
+          <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-auto">
+            <motion.div
+              animate={isSpinning ? { scale: [1, 1.1, 1] } : { scale: 1 }}
+              transition={{ repeat: isSpinning ? Infinity : 0, duration: 0.5 }}
+              className="relative"
             >
-              <div className="flex flex-col items-center justify-center">
-                {isSpinning ? (
-                  <span className={compact ? "text-xs" : "text-sm md:text-base"}>
-                    Spinning...
-                  </span>
-                ) : (
-                  <>
+              <Button
+                onClick={handleSpin}
+                disabled={isSpinning}
+                className={`
+                  rounded-full bg-gradient-to-br from-orange-500 via-pink-500 to-red-600
+                  hover:from-orange-600 hover:via-pink-600 hover:to-red-700
+                  text-white font-bold shadow-xl md:shadow-2xl hover:shadow-3xl
+                  border-4 border-white transform transition-all duration-300
+                  hover:scale-105 active:scale-95 relative z-20
+                  ${isSpinning ? "cursor-not-allowed opacity-90" : ""}
+                  ${compact ? "border-2" : ""}
+                `}
+                style={{
+                  width: buttonSize,
+                  height: buttonSize,
+                }}
+              >
+                <div className="flex flex-col items-center justify-center">
+                  {isSpinning ? (
                     <span
-                      className={
-                        compact ? "text-base font-black" : "text-xl md:text-2xl font-black"
-                      }
+                      className={compact ? "text-xs" : "text-sm md:text-base"}
                     >
-                      SPIN
+                      Spinning...
                     </span>
-                    {!compact && (
-                      <span className="text-base md:text-lg font-semibold">
-                        NOW!
+                  ) : (
+                    <>
+                      <span
+                        className={
+                          compact
+                            ? "text-base font-black"
+                            : "text-xl md:text-2xl font-black"
+                        }
+                      >
+                        SPIN
                       </span>
-                    )}
-                  </>
-                )}
-              </div>
-            </Button>
+                      {!compact && (
+                        <span className="text-base md:text-lg font-semibold">
+                          NOW!
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
+              </Button>
 
-            {!compact && (
-              <>
-                <div className="absolute inset-0 rounded-full border-4 border-white/30 -m-2"></div>
-                <div className="absolute inset-0 rounded-full border-4 border-white/20 -m-4"></div>
-              </>
-            )}
-          </motion.div>
-        </div>
+              {!compact && (
+                <>
+                  <div className="absolute inset-0 rounded-full border-4 border-white/30 -m-2"></div>
+                  <div className="absolute inset-0 rounded-full border-4 border-white/20 -m-4"></div>
+                </>
+              )}
+            </motion.div>
+          </div>
+        )}
 
         <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 z-5 pointer-events-none">
           <div className="w-[5px] bg-gradient-to-b from-red-600 to-red-800 mx-auto"></div>
@@ -528,12 +523,6 @@ export default function SpinWheel({
             transition={{ type: "spring", stiffness: 200 }}
             className="w-full space-y-4"
           >
-            {!compact && (
-              <div className="bg-gradient-to-r from-green-400 via-emerald-500 to-green-600 text-white px-6 py-4 md:px-8 md:py-6 rounded-2xl font-bold text-lg md:text-xl shadow-xl border-4 border-white text-center">
-                🎉 Congratulations! 🎉
-              </div>
-            )}
-
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -553,7 +542,7 @@ export default function SpinWheel({
                     compact ? "text-lg" : "text-xl"
                   }`}
                 >
-                  {winner.name}
+                  🎉 Congratulations! 🎉
                 </span>
               </p>
               <p
@@ -561,8 +550,8 @@ export default function SpinWheel({
                   compact ? "mb-4 text-sm" : "mb-6 text-sm md:text-base"
                 }`}
               >
-                We've reserved your {winner.name.replace("% Discount", "%")}{" "}
-                for the next 15 minutes!
+                We've reserved your {winner.name.replace("% Discount", "%")} for
+                the next 15 minutes!
               </p>
 
               <Button
@@ -588,8 +577,12 @@ export default function SpinWheel({
 
       <style jsx global>{`
         @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
+          0% {
+            transform: rotate(0deg);
+          }
+          100% {
+            transform: rotate(360deg);
+          }
         }
         .animate-spin {
           animation: spin 1s linear infinite;
@@ -603,9 +596,6 @@ export default function SpinWheel({
     </main>
   );
 
-  // ────────────────────────────────────────────────
-  // Render logic
-  // ────────────────────────────────────────────────
   if (appState === "form") {
     return (
       <DiscountForm
@@ -613,6 +603,7 @@ export default function SpinWheel({
         onBack={() => {
           setWinner(null);
           setAppState("wheel");
+          setShowTitleAndButton(true);
           if (compact && autoShow) handleClose();
         }}
         compact={compact}
