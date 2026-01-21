@@ -280,7 +280,7 @@ export default function DiscountForm({
                   ? "border-red-500 focus:border-red-500 ring-red-200"
                   : "border-gray-300 focus:border-emerald-500 ring-emerald-200"
               } focus:ring-2 outline-none disabled:opacity-60`}
-              placeholder="you@example.com"
+              placeholder="johndoe@gmail.com"
               disabled={isSubmitting}
             />
             {fieldErrors.email && (
